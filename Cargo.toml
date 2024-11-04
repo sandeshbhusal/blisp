@@ -1,0 +1,12 @@
+[package]
+name = "hulang"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.92"
+indexmap = "2.6.0"
+regex = "1.11.1"
+strum = "0.26.3"
+strum_macros = "0.26.4"
+thiserror = "1.0.68"
