@@ -15,6 +15,9 @@ pub(crate) enum TokenType {
     TypeFloat,
     TypeBool,
 
+    BooleanTrue,
+    BooleanFalse,
+
     Lparen,
     Rparen,
     Lbrac,
@@ -50,6 +53,8 @@ static PATTERN_MAP: LazyLock<IndexMap<&'static str, TokenType>> = LazyLock::new(
             TokenType::TypeFloat => r"Float",
             TokenType::TypeBool => r"Bool",
             TokenType::TypeInt => r"Int",
+            TokenType::BooleanTrue => r"true",
+            TokenType::BooleanFalse => r"false",
             TokenType::Lparen => r"\(",
             TokenType::Rparen => r"\)",
             TokenType::Lbrac => r"\{",

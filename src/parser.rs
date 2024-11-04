@@ -5,7 +5,7 @@ use crate::lexer::TokenType;
 use super::lexer::Token;
 use anyhow::{Context, Result};
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 enum Operator {
     Plus,
     Minus,
@@ -22,28 +22,30 @@ enum Operator {
     Not,
 }
 
-#[derive(Debug, PartialEq, Eq)]
-enum TypeName {
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum TypeName {
     Int,
     Float,
     Bool,
+    Unit,
+    UDT(String),
 }
 
-#[derive(Debug, PartialEq, Eq)]
-struct Decl {
-    ident: String,
-    typename: TypeName,
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Decl {
+    pub ident: String,
+    pub typename: TypeName,
 }
 
 #[derive(Debug, PartialEq)]
-enum Value {
+pub(crate) enum Value {
     Integer(i32),
     Float(f32),
     Function,
 }
 
-#[derive(Debug, PartialEq)]
-enum Expression {
+#[derive(Debug, PartialEq, Clone)]
+pub(crate) enum Expression {
     Block(Vec<Expression>),
     If {
         check: Box<Expression>,
@@ -68,6 +70,7 @@ enum Expression {
         ident: String,
         args: Vec<Expression>,
     },
+    Boolean(bool),
     Integer(i32),
     Float(f32),
 }
@@ -110,6 +113,8 @@ impl Parser {
                 TokenType::Lparen => return self.parse_block(),
                 TokenType::KwIf => return self.parse_if_statement(),
                 TokenType::KwWhile => return self.parse_while_statement(),
+                TokenType::BooleanTrue => return self.parse_bool_true(),
+                TokenType::BooleanFalse => return self.parse_bool_false(),
                 TokenType::Plus
                 | TokenType::Eq
                 | TokenType::Ge
@@ -131,12 +136,23 @@ impl Parser {
         }
     }
 
+    fn parse_bool_true(&mut self) -> Result<Expression> {
+        self.expect(TokenType::BooleanTrue)?;
+        return Ok(Expression::Boolean(true));
+    }
+
+    fn parse_bool_false(&mut self) -> Result<Expression> {
+        self.expect(TokenType::BooleanFalse)?;
+        return Ok(Expression::Boolean(false));
+    }
+
     fn parse_type(&mut self) -> Result<TypeName> {
         if let Some(token) = self.token_stream.pop_front() {
             match token.r#type {
                 TokenType::TypeInt => Ok(TypeName::Int),
                 TokenType::TypeFloat => Ok(TypeName::Float),
                 TokenType::TypeBool => Ok(TypeName::Bool),
+                TokenType::Identifier => Ok(TypeName::UDT(token.content)),
                 _ => anyhow::bail!(
                     "Expected type declaration, found {:?} as {:?}",
                     token.r#type,
