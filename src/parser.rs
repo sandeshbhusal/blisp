@@ -6,7 +6,7 @@ use super::lexer::Token;
 use anyhow::{Context, Result};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-enum Operator {
+pub(crate) enum Operator {
     Plus,
     Minus,
     Times,
@@ -23,7 +23,7 @@ enum Operator {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum TypeName {
+pub(crate) enum TypeName {
     Int,
     Float,
     Bool,
@@ -32,7 +32,7 @@ pub enum TypeName {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Decl {
+pub(crate) struct Decl {
     pub ident: String,
     pub typename: TypeName,
 }
@@ -41,7 +41,8 @@ pub struct Decl {
 pub(crate) enum Value {
     Integer(i32),
     Float(f32),
-    Function,
+    Boolean(bool),
+    Nil,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -75,13 +76,13 @@ pub(crate) enum Expression {
     Float(f32),
 }
 
-struct Parser {
+pub(crate) struct Parser {
     token_stream: VecDeque<Token>,
     program: Vec<Expression>,
 }
 
 impl Parser {
-    fn new<T: Iterator<Item = Token>>(stream: T) -> Self {
+    pub fn new<T: Iterator<Item = Token>>(stream: T) -> Self {
         return Self {
             token_stream: stream.into_iter().collect::<VecDeque<_>>(),
             program: vec![],

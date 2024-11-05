@@ -1,8 +1,8 @@
 use crate::parser::{Decl, Expression, TypeName};
 use std::collections::HashMap;
 
+#[derive(Default)]
 struct TypeChecker {
-    ast: Expression,
     functions: HashMap<String, TypeName>,
     function_params: HashMap<String, Vec<TypeName>>,
 }
@@ -13,11 +13,12 @@ impl TypeChecker {
         match expr {
             Expression::Block(exprs) => {
                 // Return the type of the last expression in the block, or Unit if empty.
-                exprs
-                    .iter()
-                    .last()
-                    .map(|last_expr| self.typecheck(last_expr))
-                    .unwrap_or(Ok(TypeName::Unit))
+                let mut typeid = TypeName::Unit;
+                for expr in exprs {
+                    typeid = self.typecheck(expr)?;
+                }
+
+                return Ok(typeid);
             }
 
             Expression::If {
@@ -46,7 +47,7 @@ impl TypeChecker {
                 self.typecheck(block)
             }
 
-            Expression::Binary { op: _op, operands } => {
+            Expression::Binary { op, operands } => {
                 // Ensure all operands have the same type.
                 if operands.is_empty() {
                     return Ok(TypeName::Unit);
@@ -109,5 +110,38 @@ impl TypeChecker {
 
     pub fn typecheck_decl(&self, decl: &Decl) -> TypeName {
         decl.typename.clone()
+    }
+}
+
+#[cfg(test)]
+mod typechecktest {
+    use crate::lexer;
+
+    use super::TypeChecker;
+
+    #[test]
+    fn print_program_type() {
+        let fiboprogram = r#"
+            (
+                (def fibo (var x Int)
+                    Int
+                    (if (== x 0)
+                        0
+                        (if (== x 1)
+                            1
+                            (+ (fibo (- x 1)) (fibo (- x 2)))
+                        )
+                    )
+                )
+                (fibo 10)
+            "#;
+
+        let lexer = lexer::lexer(fiboprogram).unwrap();
+        let mut parser = crate::parser::Parser::new(lexer.into_iter());
+        let ast = parser.parse().unwrap();
+
+        let mut typechecker:TypeChecker = Default::default();
+        let typename = typechecker.typecheck(&ast).unwrap();
+        println!("{:?}", typename);
     }
 }
