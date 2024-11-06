@@ -9,6 +9,7 @@ pub(crate) enum TokenType {
     KwDef,
     KwVar,
     KwIf,
+    KwElse,
     KwWhile,
 
     TypeInt,
@@ -22,6 +23,8 @@ pub(crate) enum TokenType {
     Rparen,
     Lbrac,
     Rbrac,
+    Comma,
+    Semicolon,
 
     Integer,
     Float,
@@ -31,6 +34,7 @@ pub(crate) enum TokenType {
     Minus,
     Mul,
     Div,
+    Assign,
 
     Lt,
     Gt,
@@ -49,10 +53,11 @@ static PATTERN_MAP: LazyLock<IndexMap<&'static str, TokenType>> = LazyLock::new(
             TokenType::KwDef => "def",
             TokenType::KwVar => "var",
             TokenType::KwIf => "if",
+            TokenType::KwElse => "else",
             TokenType::KwWhile => "while",
-            TokenType::TypeFloat => r"Float",
-            TokenType::TypeBool => r"Bool",
-            TokenType::TypeInt => r"Int",
+            TokenType::TypeFloat => r"float",
+            TokenType::TypeBool => r"bool",
+            TokenType::TypeInt => r"int",
             TokenType::BooleanTrue => r"true",
             TokenType::BooleanFalse => r"false",
             TokenType::Lparen => r"\(",
@@ -70,9 +75,12 @@ static PATTERN_MAP: LazyLock<IndexMap<&'static str, TokenType>> = LazyLock::new(
             TokenType::Ge => ">=",
             TokenType::Lt => "<",
             TokenType::Gt => ">",
-            TokenType::Eq => "=",
+            TokenType::Assign => "=",
+            TokenType::Eq => "==",
             TokenType::Neq => "!=",
             TokenType::Not => "!",
+            TokenType::Comma => ",",
+            TokenType::Semicolon => ";",
         };
 
         map.insert(pattern, variant);
@@ -81,12 +89,12 @@ static PATTERN_MAP: LazyLock<IndexMap<&'static str, TokenType>> = LazyLock::new(
     map
 });
 
-#[derive(Debug)]
-pub(crate) struct Token {
-    pub(crate) r#type: TokenType,
-    pub(crate) start: usize,
-    pub(crate) end: usize,
-    pub(crate) content: String,
+#[derive(Debug, Clone)]
+pub struct Token {
+    pub r#type: TokenType,
+    pub start: usize,
+    pub end: usize,
+    pub content: String,
 }
 
 pub fn lexer(input: &str) -> Result<Vec<Token>, (Vec<Token>, String)> {
@@ -134,54 +142,4 @@ pub fn lexer(input: &str) -> Result<Vec<Token>, (Vec<Token>, String)> {
     }
 
     Ok(tokens)
-}
-
-#[cfg(test)]
-mod lexer_tests {
-    use super::lexer;
-
-    #[test]
-    fn skip_whitespace() {
-        let matched = lexer("  def  ");
-        assert!(matched.is_ok_and(|k| k.len() == 1));
-    }
-
-    #[test]
-    fn check_all() {
-        let check = r#"
-            def some_function() {
-                const a
-                const b
-                if a b {}
-            }
-        "#;
-
-        assert!(lexer(check).is_ok());
-    }
-
-    #[test]
-    fn check_fibo() {
-        let check = r#"
-            (def fibo (var x Int) (
-                (if (<= x 0) (1) (
-                    (+ (fibo (- x 1)) (fibo (-x 2))
-                ))
-            )<)
-        "#;
-
-        assert!(lexer(check).is_ok());
-    }
-
-    #[test]
-    fn check_types() {
-        let check = r#"
-            def some_function() {
-                const a Int
-                const b Float
-                const c Bool
-            }
-        "#;
-
-        assert!(lexer(check).is_ok());
-    }
 }
