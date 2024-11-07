@@ -1,5 +1,4 @@
 use std::collections::VecDeque;
-use std::env::consts::ARCH;
 
 use crate::ast::Operator;
 pub(crate) use crate::ast::TypeName;
@@ -27,13 +26,13 @@ fn get_operator_precedence(operator: TokenType) -> (i32, i32) {
         TokenType::Mul => (2, 0),
         TokenType::Div => (2, 0),
         TokenType::Assign => (3, 0),
-        TokenType::Lt => (1, 0),
-        TokenType::Gt => (1, 0),
-        TokenType::Le => (1, 0),
-        TokenType::Ge => (1, 0),
-        TokenType::Eq => (1, 0),
-        TokenType::Neq => (1, 0),
-        TokenType::Not => (1, 0),
+        TokenType::Lt => (0, 0),
+        TokenType::Gt => (0, 0),
+        TokenType::Le => (0, 0),
+        TokenType::Ge => (0, 0),
+        TokenType::Eq => (0, 0),
+        TokenType::Neq => (0, 0),
+        TokenType::Not => (0, 0),
 
         _ => panic!("Unknown operator! {:?}", operator),
     }
@@ -98,10 +97,6 @@ impl Parser {
 
     fn advance(&mut self) {
         self.token_stream.pop_front();
-    }
-
-    fn parse_program(&mut self) -> Result<Statement> {
-        todo!()
     }
 
     fn parse_func_call(&mut self) -> Result<Expression> {
@@ -260,6 +255,9 @@ impl Parser {
         let ident = self
             .expect(TokenType::Identifier)
             .context("Expected an identifier")?;
+
+        self.expect(TokenType::Assign)
+            .context("Expected '=' in assignment.")?;
         let value = self
             .parse_expr()
             .context("Expected an expression on the RHS of assignment")?;
@@ -271,7 +269,7 @@ impl Parser {
     }
 
     fn parse_if(&mut self) -> Result<Statement> {
-        self.expect(TokenType::KwIf);
+        self.expect(TokenType::KwIf)?;
         let expr = self.parse_expr()?;
         let trueblock = Box::new(self.parse_block()?);
 
@@ -315,7 +313,9 @@ impl Parser {
             TokenType::BooleanFalse => Ok(self.parse_bool()?),
             TokenType::Lparen => {
                 self.advance(); // Eat the '('
-                let expr = self.parse_expr().context("Invalid expression in parantheses")?;
+                let expr = self
+                    .parse_expr()
+                    .context("Invalid expression in parantheses")?;
                 self.expect(TokenType::Rparen)
                     .context("Improperly closed paranthese in expression")?;
                 Ok(expr)
@@ -393,15 +393,42 @@ impl Parser {
             .context("Failed to parse expression")?);
     }
 
+    fn parse_return_statement(&mut self) -> Result<Statement> {
+        self.expect(TokenType::KwReturn)?;
+        let expr = self.parse_expr()?;
+        return Ok(Statement::Return { expression: expr });
+    }
+
     fn parse_statement(&mut self) -> Result<Statement> {
-        let rval = self.parse_if().or(self.parse_while().or(self
-            .parse_var_decl()
-            .or(self.parse_var_decl_assign().or(self.parse_func_decl()))));
+        let rules = &[
+            Self::parse_func_decl,
+            Self::parse_if,
+            Self::parse_while,
+            Self::parse_var_decl,
+            Self::parse_assignment,
+            Self::parse_return_statement
+        ];
 
-        self.expect(TokenType::Semicolon)
-            .context("Statement must be terminated with a semicolon.")?;
+        for func in rules {
+            if let Ok(stmt) = func(self) {
+                match stmt {
+                    Statement::Assignment { ident: _, value: _ }
+                    | Statement::VarDecl {
+                        ident: _,
+                        typename: _,
+                    }
+                    | Statement::Expr(_)
+                    | Statement::Empty => {
+                        self.expect(TokenType::Semicolon)
+                            .context("Expected a semicolon")?;
+                    }
+                    _ => {}
+                }
+                return Ok(stmt);
+            }
+        }
 
-        rval
+        anyhow::bail!("No rule matches to parse statement.");
     }
 }
 
@@ -422,7 +449,7 @@ mod parser_tests {
     fn test_parse_funcdecl() {
         let stmt = r#"
             def some_function(int x, int y) bool {
-                var x int
+                var x int;
             }
         "#;
 
@@ -446,9 +473,8 @@ mod parser_tests {
 
     #[test]
     fn test_parse_expression() {
-        let expr = "(a + b) / (c + d)";
+        let expr = "(a + b) / (c + d) < e";
         let mut parser = Parser::new(get_lexer(expr).into_iter());
-        let expr = parser.parse_expr().unwrap();
-        dbg!(expr);
+        parser.parse_expr().unwrap();
     }
 }

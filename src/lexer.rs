@@ -11,6 +11,7 @@ pub(crate) enum TokenType {
     KwIf,
     KwElse,
     KwWhile,
+    KwReturn,
 
     TypeInt,
     TypeFloat,
@@ -55,6 +56,7 @@ static PATTERN_MAP: LazyLock<IndexMap<&'static str, TokenType>> = LazyLock::new(
             TokenType::KwIf => "if",
             TokenType::KwElse => "else",
             TokenType::KwWhile => "while",
+            TokenType::KwReturn => "return",
             TokenType::TypeFloat => r"float",
             TokenType::TypeBool => r"bool",
             TokenType::TypeInt => r"int",

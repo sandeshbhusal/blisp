@@ -95,6 +95,10 @@ pub(crate) enum Statement {
         statements: Vec<Statement>
     },
 
+    Return {
+        expression: Expression
+    },
+
     Expr(Expression),
     Empty,
 }
